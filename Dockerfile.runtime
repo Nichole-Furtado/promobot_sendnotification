@@ -1,0 +1,7 @@
+FROM eclipse-temurin:21-jre-alpine
+WORKDIR /app
+COPY app.jar app.jar
+RUN addgroup -S promobot && adduser -S promobot -G promobot
+USER promobot
+EXPOSE 8080
+ENTRYPOINT ["java", "-jar", "app.jar"]
