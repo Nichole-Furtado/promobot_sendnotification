@@ -66,3 +66,8 @@ export interface LogEntry {
   logger: string;
   message: string;
 }
+
+export interface PricePoint {
+  capturedAt: string;
+  price: number;
+}

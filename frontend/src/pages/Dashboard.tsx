@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
+import { motion } from "framer-motion";
 import {
   Activity, BadgePercent, Bell, Boxes, Cpu, ExternalLink, Megaphone, Play, RefreshCw, Send, Timer, TrendingDown,
 } from "lucide-react";
@@ -144,7 +145,18 @@ export default function Dashboard() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <Card>
+        <motion.div
+          key={stats.lastRunAt ?? "none"}
+          initial={stats.lastRunAt ? { boxShadow: "0 0 0 0 hsl(var(--primary) / 0.6)" } : undefined}
+          animate={
+            stats.lastRunAt && Date.now() - new Date(stats.lastRunAt).getTime() < 15000
+              ? { boxShadow: ["0 0 0 0 hsl(var(--primary) / 0.6)", "0 0 0 10px hsl(var(--primary) / 0)"] }
+              : { boxShadow: "0 0 0 0 hsl(var(--primary) / 0)" }
+          }
+          transition={{ duration: 1.4, repeat: 2, ease: "easeOut" }}
+          className="rounded-lg"
+        >
+          <Card>
           <CardHeader className="pb-2">
             <CardDescription className="flex items-center gap-1.5">
               <Activity className="h-3.5 w-3.5" /> Último ciclo
@@ -161,6 +173,7 @@ export default function Dashboard() {
             </p>
           </CardContent>
         </Card>
+        </motion.div>
 
         <Card>
           <CardHeader className="pb-2">

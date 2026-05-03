@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { ColumnDef } from "@tanstack/react-table";
 import toast from "react-hot-toast";
 import {
@@ -129,9 +130,13 @@ export default function Products() {
         accessorKey: "title",
         header: "Título",
         cell: ({ row }) => (
-          <span className="block max-w-[320px] truncate font-medium" title={row.original.title}>
+          <Link
+            to={`/products/${row.original.id}`}
+            className="block max-w-[320px] truncate font-medium hover:text-primary hover:underline"
+            title={row.original.title}
+          >
             {row.original.title}
-          </span>
+          </Link>
         ),
       },
       {

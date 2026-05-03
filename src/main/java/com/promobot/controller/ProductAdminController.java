@@ -3,9 +3,11 @@ package com.promobot.controller;
 import com.promobot.dto.CycleResult;
 import com.promobot.dto.DiscoveryRequest;
 import com.promobot.dto.DiscoveryResult;
+import com.promobot.dto.PricePointResponse;
 import com.promobot.dto.ProductRequest;
 import com.promobot.dto.ProductResponse;
 import com.promobot.entity.Product;
+import com.promobot.repository.PriceHistoryRepository;
 import com.promobot.repository.ProductRepository;
 import com.promobot.scheduler.PromotionScheduler;
 import com.promobot.service.AmazonDiscoveryService;
@@ -17,6 +19,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -27,9 +30,35 @@ import java.util.List;
 public class ProductAdminController {
 
     private final ProductRepository productRepo;
+    private final PriceHistoryRepository priceHistoryRepo;
     private final PromotionDetectorService detectorService;
     private final PromotionScheduler scheduler;
     private final AmazonDiscoveryService discoveryService;
+
+    @GetMapping("/{id}")
+    public ResponseEntity<ProductResponse> getById(@PathVariable Long id) {
+        return productRepo.findById(id)
+            .map(p -> ResponseEntity.ok(ProductResponse.from(p)))
+            .orElse(ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/{id}/price-history")
+    public ResponseEntity<List<PricePointResponse>> priceHistory(
+            @PathVariable Long id,
+            @RequestParam(defaultValue = "30") int days) {
+        return productRepo.findById(id)
+            .map(product -> {
+                int safeDays = Math.max(1, Math.min(days, 365));
+                LocalDateTime since = LocalDateTime.now().minusDays(safeDays);
+                List<PricePointResponse> points = priceHistoryRepo
+                    .findByProductAndCapturedAtAfterOrderByCapturedAtAsc(product, since)
+                    .stream()
+                    .map(h -> new PricePointResponse(h.getCapturedAt(), h.getPrice()))
+                    .toList();
+                return ResponseEntity.ok(points);
+            })
+            .orElse(ResponseEntity.notFound().build());
+    }
 
     @GetMapping
     public List<ProductResponse> listAll() {

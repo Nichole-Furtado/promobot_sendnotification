@@ -1,7 +1,7 @@
 import axios from 'axios';
 import type {
   Product, Channel, Promotion, DashboardStats,
-  CycleResult, BroadcastResult, LogEntry,
+  CycleResult, BroadcastResult, LogEntry, PricePoint,
 } from '../types';
 
 export const api = axios.create({ baseURL: '/' });
@@ -11,6 +11,9 @@ export const getHealth = () => api.get('/actuator/health').then(r => r.data);
 export const getDashboard = () => api.get<DashboardStats>('/api/dashboard').then(r => r.data);
 
 export const listProducts = () => api.get<Product[]>('/api/products').then(r => r.data);
+export const getProduct = (id: number) => api.get<Product>(`/api/products/${id}`).then(r => r.data);
+export const getProductPriceHistory = (id: number, days = 30) =>
+  api.get<PricePoint[]>(`/api/products/${id}/price-history?days=${days}`).then(r => r.data);
 export const createProduct = (body: { asin: string; title: string; niche: string; targetDiscountPct: number }) =>
   api.post<Product>('/api/products', body).then(r => r.data);
 export const toggleProduct = (id: number) => api.patch(`/api/products/${id}/toggle`);
