@@ -1,62 +1,219 @@
-import { useEffect, useState } from 'react';
-import toast from 'react-hot-toast';
-import { Plus, Play, Pause, Trash2, Send } from 'lucide-react';
-import { listChannels, createChannel, toggleChannel, deleteChannel } from '../api/client';
-import type { Channel } from '../types';
-import Modal from '../components/Modal';
-import Spinner from '../components/Spinner';
-import { fmtDate } from '../lib/format';
+import { useEffect, useMemo, useState } from "react";
+import { ColumnDef } from "@tanstack/react-table";
+import toast from "react-hot-toast";
+import { Pause, Play, Plus, Send, Trash2 } from "lucide-react";
+import {
+  createChannel, deleteChannel, listChannels, toggleChannel,
+} from "@/api/client";
+import type { Channel } from "@/types";
+import { fmtDate } from "@/lib/format";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card, CardContent, CardDescription, CardHeader, CardTitle,
+} from "@/components/ui/card";
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
+import { Spinner } from "@/components/ui/spinner";
+import { EmptyState } from "@/components/ui/empty-state";
+import { DataTable } from "@/components/data-table";
+
+const EMPTY_FORM = { type: "telegram", identifier: "" };
 
 export default function Channels() {
   const [items, setItems] = useState<Channel[] | null>(null);
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ type: 'telegram', identifier: '' });
+  const [form, setForm] = useState(EMPTY_FORM);
+  const [confirmId, setConfirmId] = useState<number | null>(null);
 
   const load = async () => setItems(await listChannels());
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+  }, []);
 
   const onCreate = async () => {
-    if (!form.identifier.trim()) return toast.error('Identificador obrigatório');
-    try { await createChannel(form); toast.success('Canal adicionado'); setOpen(false); setForm({ type: 'telegram', identifier: '' }); load(); }
-    catch (e: any) { toast.error(e.message); }
+    if (!form.identifier.trim()) return toast.error("Identificador obrigatório");
+    try {
+      await createChannel(form);
+      toast.success("Canal adicionado");
+      setOpen(false);
+      setForm(EMPTY_FORM);
+      load();
+    } catch (e: any) {
+      toast.error(e.message);
+    }
   };
 
+  const onToggle = async (id: number) => {
+    try {
+      await toggleChannel(id);
+      load();
+    } catch (e: any) {
+      toast.error(e.message);
+    }
+  };
+
+  const onDelete = async (id: number) => {
+    try {
+      await deleteChannel(id);
+      toast.success("Removido");
+      setConfirmId(null);
+      load();
+    } catch (e: any) {
+      toast.error(e.message);
+    }
+  };
+
+  const columns = useMemo<ColumnDef<Channel>[]>(
+    () => [
+      {
+        accessorKey: "type",
+        header: "Tipo",
+        cell: ({ row }) => (
+          <Badge variant="outline" className="inline-flex items-center gap-1">
+            <Send className="h-3 w-3" /> {row.original.type}
+          </Badge>
+        ),
+      },
+      {
+        accessorKey: "identifier",
+        header: "Identificador",
+        cell: ({ row }) => <span className="font-mono text-xs">{row.original.identifier}</span>,
+      },
+      {
+        accessorKey: "active",
+        header: () => <span className="block text-center">Status</span>,
+        cell: ({ row }) => (
+          <div className="flex justify-center">
+            <Badge variant={row.original.active ? "success" : "secondary"}>
+              {row.original.active ? "Ativo" : "Inativo"}
+            </Badge>
+          </div>
+        ),
+      },
+      {
+        accessorKey: "createdAt",
+        header: "Criado",
+        cell: ({ row }) => (
+          <span className="text-xs text-muted-foreground">{fmtDate(row.original.createdAt)}</span>
+        ),
+      },
+      {
+        id: "actions",
+        header: "",
+        enableSorting: false,
+        cell: ({ row }) => (
+          <div className="flex justify-end gap-1">
+            <Button variant="ghost" size="icon" onClick={() => onToggle(row.original.id)}>
+              {row.original.active ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
+            </Button>
+            <Button variant="ghost" size="icon" onClick={() => setConfirmId(row.original.id)}>
+              <Trash2 className="h-3.5 w-3.5 text-destructive" />
+            </Button>
+          </div>
+        ),
+      },
+    ],
+    []
+  );
+
   return (
-    <div className="card">
-      <div className="flex items-center justify-between p-4 border-b border-border">
-        <h2 className="font-semibold">Canais de Notificação</h2>
-        <button className="btn-primary" onClick={() => setOpen(true)}><Plus className="w-4 h-4" /> Adicionar</button>
-      </div>
-      {!items ? <div className="flex justify-center py-12"><Spinner /></div>
-        : items.length === 0 ? <div className="text-center text-muted py-12">Nenhum canal cadastrado.</div>
-        : (
-          <table className="w-full text-sm">
-            <thead className="text-xs uppercase text-muted bg-bg">
-              <tr><th className="text-left p-3">Tipo</th><th className="text-left p-3">Identificador</th><th className="text-center p-3">Status</th><th className="text-left p-3">Criado</th><th></th></tr>
-            </thead>
-            <tbody>
-              {items.map(c => (
-                <tr key={c.id} className="border-t border-border hover:bg-slate-800">
-                  <td className="p-3"><span className="badge bg-blue-700 text-white inline-flex items-center gap-1"><Send className="w-3 h-3" /> {c.type}</span></td>
-                  <td className="p-3 font-mono text-xs">{c.identifier}</td>
-                  <td className="p-3 text-center"><span className={`badge ${c.active ? 'bg-green-600' : 'bg-slate-600'} text-white`}>{c.active ? 'Ativo' : 'Inativo'}</span></td>
-                  <td className="p-3 text-xs text-muted">{fmtDate(c.createdAt)}</td>
-                  <td className="p-3 text-right whitespace-nowrap">
-                    <button className="btn-ghost mr-1" onClick={async () => { await toggleChannel(c.id); load(); }}>{c.active ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}</button>
-                    <button className="btn-danger" onClick={async () => { if (confirm('Remover canal?')) { await deleteChannel(c.id); toast.success('Removido'); load(); } }}><Trash2 className="w-3.5 h-3.5" /></button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      <Modal open={open} onClose={() => setOpen(false)} title="Adicionar Canal">
-        <div className="space-y-3">
-          <div><label className="text-xs text-muted">Tipo</label><select className="input" value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value }))}><option value="telegram">Telegram</option></select></div>
-          <div><label className="text-xs text-muted">Chat ID *</label><input className="input" placeholder="-100xxxxxxxxxx" value={form.identifier} onChange={e => setForm(f => ({ ...f, identifier: e.target.value }))} /></div>
-          <div className="flex justify-end gap-2 pt-3"><button className="btn-ghost" onClick={() => setOpen(false)}>Cancelar</button><button className="btn-primary" onClick={onCreate}><Plus className="w-4 h-4" /> Adicionar</button></div>
-        </div>
-      </Modal>
-    </div>
+    <>
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Canais de notificação</CardTitle>
+              <CardDescription>Para onde as promoções detectadas serão enviadas.</CardDescription>
+            </div>
+            <Button size="sm" onClick={() => setOpen(true)}>
+              <Plus className="h-4 w-4" /> Adicionar
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {!items ? (
+            <div className="flex h-32 items-center justify-center">
+              <Spinner />
+            </div>
+          ) : (
+            <DataTable
+              columns={columns}
+              data={items}
+              searchPlaceholder="Buscar por tipo ou identificador…"
+              pageSize={10}
+              emptyState={
+                <EmptyState
+                  icon={<Send className="h-6 w-6" />}
+                  title="Nenhum canal cadastrado"
+                  description="Adicione um chat ID do Telegram para receber as notificações."
+                  action={
+                    <Button onClick={() => setOpen(true)}>
+                      <Plus className="h-4 w-4" /> Adicionar canal
+                    </Button>
+                  }
+                />
+              }
+            />
+          )}
+        </CardContent>
+      </Card>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Adicionar canal</DialogTitle>
+            <DialogDescription>Use o chat ID do Telegram (ex.: -100XXXXXXXXXX para grupos).</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="ctype">Tipo</Label>
+              <Select
+                id="ctype"
+                value={form.type}
+                onChange={(e) => setForm((f) => ({ ...f, type: e.target.value }))}
+              >
+                <option value="telegram">Telegram</option>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="cid">Chat ID *</Label>
+              <Input
+                id="cid"
+                placeholder="-100xxxxxxxxxx"
+                value={form.identifier}
+                onChange={(e) => setForm((f) => ({ ...f, identifier: e.target.value }))}
+                className="font-mono"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setOpen(false)}>Cancelar</Button>
+            <Button onClick={onCreate}>
+              <Plus className="h-4 w-4" /> Adicionar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={confirmId !== null} onOpenChange={(o) => !o && setConfirmId(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Remover canal?</DialogTitle>
+            <DialogDescription>Esta ação não pode ser desfeita.</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setConfirmId(null)}>Cancelar</Button>
+            <Button variant="destructive" onClick={() => confirmId && onDelete(confirmId)}>
+              <Trash2 className="h-4 w-4" /> Remover
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

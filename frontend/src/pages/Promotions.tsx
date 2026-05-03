@@ -1,50 +1,131 @@
-import { useEffect, useState } from 'react';
-import { RefreshCw } from 'lucide-react';
-import { listPromotions } from '../api/client';
-import type { Promotion } from '../types';
-import Spinner from '../components/Spinner';
-import { fmtDate, fmtCurrency } from '../lib/format';
+import { useEffect, useMemo, useState } from "react";
+import { ColumnDef } from "@tanstack/react-table";
+import { ExternalLink, Megaphone, RefreshCw } from "lucide-react";
+import { listPromotions } from "@/api/client";
+import type { Promotion } from "@/types";
+import { fmtCurrency, fmtDate } from "@/lib/format";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Spinner } from "@/components/ui/spinner";
+import { EmptyState } from "@/components/ui/empty-state";
+import { DataTable } from "@/components/data-table";
 
 export default function Promotions() {
   const [items, setItems] = useState<Promotion[] | null>(null);
+
   const load = async () => setItems(await listPromotions());
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+  }, []);
+
+  const columns = useMemo<ColumnDef<Promotion>[]>(
+    () => [
+      {
+        accessorKey: "productTitle",
+        header: "Produto",
+        cell: ({ row }) => (
+          <span className="block max-w-[280px] truncate font-medium" title={row.original.productTitle}>
+            {row.original.productTitle}
+          </span>
+        ),
+      },
+      {
+        accessorKey: "asin",
+        header: "ASIN",
+        cell: ({ row }) => (
+          <a
+            href={`https://www.amazon.com.br/dp/${row.original.asin}`}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1 font-mono text-xs text-accent hover:underline"
+          >
+            {row.original.asin} <ExternalLink className="h-3 w-3" />
+          </a>
+        ),
+      },
+      {
+        accessorKey: "previousPrice",
+        header: () => <span className="block text-right">De</span>,
+        cell: ({ row }) => (
+          <span className="block text-right text-xs text-muted-foreground line-through tabular-nums">
+            {fmtCurrency(row.original.previousPrice)}
+          </span>
+        ),
+      },
+      {
+        accessorKey: "currentPrice",
+        header: () => <span className="block text-right">Por</span>,
+        cell: ({ row }) => (
+          <span className="block text-right font-semibold text-success tabular-nums">
+            {fmtCurrency(row.original.currentPrice)}
+          </span>
+        ),
+      },
+      {
+        accessorKey: "discountPct",
+        header: () => <span className="block text-center">Desconto</span>,
+        cell: ({ row }) => (
+          <div className="flex justify-center">
+            <Badge variant="success">-{Math.round(Number(row.original.discountPct))}%</Badge>
+          </div>
+        ),
+      },
+      {
+        accessorKey: "detectedAt",
+        header: "Detectado",
+        cell: ({ row }) => (
+          <span className="text-xs text-muted-foreground">{fmtDate(row.original.detectedAt)}</span>
+        ),
+      },
+      {
+        accessorKey: "notified",
+        header: () => <span className="block text-center">Status</span>,
+        cell: ({ row }) => (
+          <div className="flex justify-center">
+            <Badge variant={row.original.notified ? "default" : "warning"}>
+              {row.original.notified ? "Enviado" : "Pendente"}
+            </Badge>
+          </div>
+        ),
+      },
+    ],
+    []
+  );
+
   return (
-    <div className="card">
-      <div className="flex items-center justify-between p-4 border-b border-border">
-        <h2 className="font-semibold">Promoções Detectadas (últimas 20)</h2>
-        <button className="btn-outline" onClick={load}><RefreshCw className="w-4 h-4" /> Atualizar</button>
-      </div>
-      {!items ? <div className="flex justify-center py-12"><Spinner /></div>
-        : items.length === 0 ? <div className="text-center text-muted py-12">Nenhuma promoção ainda.</div>
-        : (
-          <table className="w-full text-sm">
-            <thead className="text-xs uppercase text-muted bg-bg">
-              <tr>
-                <th className="text-left p-3">Produto</th>
-                <th className="text-left p-3">ASIN</th>
-                <th className="text-right p-3">De</th>
-                <th className="text-right p-3">Por</th>
-                <th className="text-center p-3">Desconto</th>
-                <th className="text-left p-3">Detectado</th>
-                <th className="text-center p-3">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map(p => (
-                <tr key={p.id} className="border-t border-border hover:bg-slate-800">
-                  <td className="p-3">{p.productTitle.length > 40 ? p.productTitle.slice(0, 40) + '…' : p.productTitle}</td>
-                  <td className="p-3"><a className="text-accent font-mono" href={`https://www.amazon.com.br/dp/${p.asin}`} target="_blank">{p.asin}</a></td>
-                  <td className="p-3 text-right text-muted line-through">{fmtCurrency(p.previousPrice)}</td>
-                  <td className="p-3 text-right text-green-400 font-semibold">{fmtCurrency(p.currentPrice)}</td>
-                  <td className="p-3 text-center"><span className="badge bg-green-600 text-white">-{Math.round(Number(p.discountPct))}%</span></td>
-                  <td className="p-3 text-xs text-muted">{fmtDate(p.detectedAt)}</td>
-                  <td className="p-3 text-center"><span className={`badge ${p.notified ? 'bg-blue-600' : 'bg-yellow-600'} text-white`}>{p.notified ? 'Enviado' : 'Pendente'}</span></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle>Promoções detectadas</CardTitle>
+            <CardDescription>Histórico das últimas detecções pelo scraper.</CardDescription>
+          </div>
+          <Button variant="outline" size="sm" onClick={load}>
+            <RefreshCw className="h-4 w-4" /> Atualizar
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {!items ? (
+          <div className="flex h-32 items-center justify-center">
+            <Spinner />
+          </div>
+        ) : (
+          <DataTable
+            columns={columns}
+            data={items}
+            searchPlaceholder="Buscar por título ou ASIN…"
+            emptyState={
+              <EmptyState
+                icon={<Megaphone className="h-6 w-6" />}
+                title="Nenhuma promoção ainda"
+                description="As detecções aparecerão aqui quando o scraper rodar."
+              />
+            }
+          />
         )}
-    </div>
+      </CardContent>
+    </Card>
   );
 }
