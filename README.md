@@ -1,5 +1,12 @@
 # PromoBot — Sendnotification
 
+[![CI](https://github.com/Nichole-Furtado/promobot_sendnotification/actions/workflows/ci.yml/badge.svg)](https://github.com/Nichole-Furtado/promobot_sendnotification/actions/workflows/ci.yml)
+![Java](https://img.shields.io/badge/Java-21-ED8B00?logo=openjdk&logoColor=white)
+![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.3.5-6DB33F?logo=springboot&logoColor=white)
+![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black)
+![Vite](https://img.shields.io/badge/Vite-5-646CFF?logo=vite&logoColor=white)
+![License](https://img.shields.io/badge/License-MIT-blue.svg)
+
 Bot Java/Spring Boot que monitora produtos da Amazon Brasil, detecta quedas reais de preço, gera mensagens promocionais com IA e divulga em canais do Telegram.
 
 Inclui um **broadcaster rotativo** que envia 1 produto a cada 15 minutos para manter o canal ativo, e um **detector de promoção real** que roda a cada 30 minutos comparando preço atual contra histórico.
@@ -21,6 +28,7 @@ Inclui um **broadcaster rotativo** que envia 1 produto a cada 15 minutos para ma
 - [Schedulers](#schedulers)
 - [Estrutura do projeto](#estrutura-do-projeto)
 - [Frontend React (opcional)](#frontend-react-opcional)
+- [Screenshots](#screenshots)
 - [Roadmap](#roadmap)
 - [Licença](#licença)
 
@@ -312,6 +320,30 @@ npm run build  # gera dist/ pronto para deploy estático ou Nginx
 ```
 
 O painel Bootstrap servido pelo Spring continua funcionando como fallback.
+
+---
+
+## Screenshots
+
+> As imagens abaixo mostram o painel web em execução contra a API local (`localhost:8080`).
+
+### Dashboard
+
+![Dashboard do PromoBot](docs/screenshots/dashboard.png)
+
+### Gerenciamento de Produtos
+
+![Aba Produtos](docs/screenshots/products.png)
+
+### Promoções Detectadas
+
+![Aba Promoções](docs/screenshots/promotions.png)
+
+### Viewer de Logs
+
+![Aba Logs](docs/screenshots/logs.png)
+
+> Para adicionar as imagens: salve prints da tela em `docs/screenshots/` com os nomes acima e faça commit.
 
 ---
 
